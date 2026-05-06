@@ -12,7 +12,6 @@ class RoleEnum(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
     nom = Column(String(100), nullable=False)
     prenom = Column(String(100), nullable=False)
@@ -22,3 +21,12 @@ class User(Base):
     site = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+    # ✅ Nouveaux champs identité
+    login = Column(String(100), nullable=True)
+    telephone = Column(String(50), nullable=True)
+    service = Column(String(200), nullable=True)
+    site_geo = Column(String(200), nullable=True)
+    company = Column(String(200), nullable=True)
+    langue = Column(String(50), nullable=True)
+    organisation = Column(String(200), nullable=True)
+    profil_complete = Column(Boolean, default=False)

@@ -5,7 +5,7 @@ from database import get_db
 from models.user import User, RoleEnum
 from schemas.auth import UserCreate, UserResponse, Token
 from utils.security import hash_password, verify_password, create_access_token, decode_token
-
+from schemas.auth import UserCreate, UserResponse, Token, ProfilUpdate
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -87,3 +87,27 @@ def disable_user(
     user.is_active = False
     db.commit()
     return {"message": f"Utilisateur {user.email} désactivé"}
+    
+
+# ─── COMPLÉTER LE PROFIL ──────────────────────────────────────
+@router.put("/profil")
+def update_profil(
+    data: ProfilUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    for key, value in data.dict(exclude_none=True).items():
+        setattr(current_user, key, value)
+    current_user.profil_complete = True
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+# ─── VÉRIFIER SI PROFIL COMPLET ──────────────────────────────
+@router.get("/check-profil")
+def check_profil(current_user: User = Depends(get_current_user)):
+    return {
+        "profil_complete": current_user.profil_complete,
+        "role": current_user.role.value,
+        "is_admin": current_user.email == "admin@gfst.com" or current_user.role.value in ["super_admin", "admin"]
+    }

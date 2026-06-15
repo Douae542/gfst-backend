@@ -18,9 +18,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class RoleEnum(str, enum.Enum):
     super_admin = "super_admin"
     admin = "admin"
-    ingenieur = "ingenieur"
-    concepteur = "concepteur"
-    operateur = "operateur"
+  
 
 class User(Base):
     __tablename__ = "users"

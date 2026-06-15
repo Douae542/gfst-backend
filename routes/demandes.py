@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
 from models.demande import Demande
 from models.user import User, RoleEnum
 from schemas.demande import DemandeCreate, DemandeUpdate, DemandeResponse
 from routes.auth import get_current_user, require_role
+from utils.email import send_notification_email
 
 router = APIRouter()
 
@@ -14,24 +15,45 @@ def get_demandes(
     current_user: User = Depends(get_current_user)
 ):
     if current_user.role in [RoleEnum.super_admin, RoleEnum.admin]:
-        demandes = db.query(Demande).all()
+        demandes = db.query(Demande).order_by(Demande.created_at.desc()).all()
     else:
         demandes = db.query(Demande).filter(
             Demande.created_by == current_user.id
-        ).all()
+        ).order_by(Demande.created_at.desc()).all()
     return {"data": demandes, "total": len(demandes)}
 
 @router.post("/")
 def create_demande(
     data: DemandeCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    demande = Demande(**data.dict(), created_by=current_user.id)
+    # ✅ Enregistrer la demande en base
+    demande = Demande(
+        **data.dict(),
+        created_by=current_user.id,
+        statut="En attente"
+    )
     db.add(demande)
     db.commit()
     db.refresh(demande)
-    return demande
+
+    # ✅ Envoyer email en arrière-plan
+    background_tasks.add_task(
+        send_notification_email,
+        type_demande=data.type_demande,
+        reference=data.reference,
+        description=data.description or "",
+        user_nom=current_user.nom,
+        user_prenom=current_user.prenom,
+        user_email=current_user.email
+    )
+
+    return {
+        "message": "Demande enregistrée et notifications envoyées",
+        "demande": demande
+    }
 
 @router.put("/{demande_id}")
 def update_demande(
